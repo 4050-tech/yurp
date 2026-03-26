@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>YURP — Build Your AI Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:    #0b0f1a;
+    --cyan:  #4ec9f0;
+    --text:  #ffffff;
+    --sub:   #8b92a5;
+  }
+
+  html {
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    /* allow scroll on mobile so nothing gets cut off */
+    overflow-y: auto;
+  }
+
+  /* ── full-screen blue glow ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 120% 60% at 50% 110%, rgba(25,55,120,0.55) 0%, transparent 65%),
+      radial-gradient(ellipse 60%  50% at  5%  15%, rgba(20,40,90,0.3)  0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── outer wrapper — full viewport ── */
+  .page {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ══════════════════ TOP NAV ══════════════════ */
+  .topnav {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 48px 0;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+  }
+  .logo-circle {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#5ad4f5,#2a9fd4);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.1rem; color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 0 16px rgba(78,201,240,0.4);
+  }
+  .logo-text {
+    font-size: 1.15rem; font-weight: 800;
+    letter-spacing: 2.5px; color: #fff; text-transform: uppercase;
+  }
+
+  .btn-back {
+    background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.55);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem; font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 9px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-back:hover { color:#fff; border-color:rgba(255,255,255,0.3); }
+  .btn-back.hidden { visibility:hidden; pointer-events:none; }
+
+  /* ══════════════════ PROGRESS BAR ══════════════════ */
+  .progress-track {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.07);
+    margin-top: 20px;
+    flex-shrink: 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg,#4ec9f0,#30e8c8);
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 12px rgba(78,201,240,0.6);
+  }
+
+  /* ══════════════════ CONTENT ══════════════════ */
+  .content {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px 60px;
+  }
+
+  /* ══════════════════ STEPS ══════════════════ */
+  .step {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    /* wide but not unlimited — looks great on all screens */
+    max-width: 780px;
+    animation: fadeUp 0.32s cubic-bezier(.4,0,.2,1) both;
+  }
+  .step.active { display: flex; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(22px); }
+    to   { opacity:1; transform:translateY(0);    }
+  }
+
+  .step-title {
+    font-size: clamp(1.75rem, 4vw, 2.6rem);
+    font-weight: 800;
+    text-align: center;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+  .step-sub {
+    font-size: clamp(0.88rem, 2vw, 1rem);
+    color: var(--sub);
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  /* ══════════════════ OPTION CARDS ══════════════════ */
+  .options {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .opt-card {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1.5px solid rgba(255,255,255,0.09);
+    border-radius: 18px;
+    padding: 24px 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.18s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .opt-card:hover   { border-color:rgba(78,201,240,0.45); background:rgba(78,201,240,0.05); }
+  .opt-card.selected{
+    border-color:#4ec9f0;
+    background:rgba(78,201,240,0.08);
+    box-shadow:0 0 0 1px rgba(78,201,240,0.18);
+  }
+
+  .opt-icon  { font-size:1.9rem; width:40px; text-align:center; flex-shrink:0; }
+  .opt-text  { flex:1; min-width:0; }
+  .opt-label { font-size:clamp(0.95rem,2.5vw,1.05rem); font-weight:700; color:#fff; margin-bottom:4px; }
+  .opt-desc  { font-size:clamp(0.78rem,1.8vw,0.85rem); color:var(--sub); }
+
+  .opt-chk {
+    width:26px; height:26px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,0.22);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:all 0.18s;
+  }
+  .opt-card.selected .opt-chk { background:#4ec9f0; border-color:#4ec9f0; }
+  .opt-card.selected .opt-chk::after {
+    content:'';
+    display:block;
+    width:6px; height:10px;
+    border-right:2.5px solid #0a0f1a;
+    border-bottom:2.5px solid #0a0f1a;
+    transform:rotate(45deg) translate(-1px,-1px);
+  }
+
+  /* ══════════════════ SLIDER ══════════════════ */
+  .slider-block { width:100%; text-align:center; }
+
+  .slider-bignum {
+    font-size: clamp(3.8rem, 10vw, 6rem);
+    font-weight: 800;
+    color: #4ec9f0;
+    line-height: 1;
+    margin-bottom: 8px;
+    text-shadow: 0 0 60px rgba(78,201,240,0.45);
+  }
+  .slider-lbl { font-size:clamp(0.82rem,2vw,0.92rem); color:var(--sub); margin-bottom:36px; }
+
+  input[type="range"] {
+    width:100%; height:4px;
+    -webkit-appearance:none;
+    outline:none; cursor:pointer;
+    border-radius:99px;
+    background:rgba(255,255,255,0.1);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance:none;
+    width:30px; height:30px;
+    border-radius:50%;
+    background:#4ec9f0;
+    border:3px solid #0b0f1a;
+    box-shadow:0 0 0 2px #4ec9f0, 0 0 20px rgba(78,201,240,0.6);
+    cursor:pointer;
+    transition:transform 0.12s;
+  }
+  input[type="range"]::-webkit-slider-thumb:active { transform:scale(1.2); }
+  /* Firefox */
+  input[type="range"]::-moz-range-thumb {
+    width:28px; height:28px;
+    border-radius:50%;
+    background:#4ec9f0;
+    border:3px solid #0b0f1a;
+    cursor:pointer;
+  }
+  .slider-extremes {
+    display:flex; justify-content:space-between;
+    font-size:clamp(0.72rem,1.8vw,0.8rem);
+    color:var(--sub); margin-top:14px;
+  }
+
+  /* ══════════════════ TEXT INPUTS ══════════════════ */
+  .inp-group { width:100%; margin-bottom:16px; }
+
+  .big-inp {
+    width:100%;
+    background:transparent;
+    border:1.5px solid rgba(78,201,240,0.45);
+    border-radius:14px;
+    padding:18px 24px;
+    font-family:'Inter',sans-serif;
+    font-size:clamp(0.95rem,2.5vw,1.05rem);
+    color:#fff;
+    outline:none;
+    transition:border-color 0.2s, box-shadow 0.2s;
+    /* prevent iOS zoom on focus (font-size >= 16px handles this) */
+    -webkit-appearance:none;
+  }
+  .big-inp:focus {
+    border-color:#4ec9f0;
+    box-shadow:0 0 0 3px rgba(78,201,240,0.12);
+  }
+  .big-inp::placeholder { color:rgba(255,255,255,0.25); }
+  .big-inp.invalid { border-color:#ff5c5c !important; box-shadow:none !important; }
+
+  .err-txt {
+    font-size:0.78rem; color:#ff5c5c;
+    margin-top:6px; display:none;
+  }
+  .err-txt.show { display:block; }
+
+  /* ══════════════════ CTA BUTTON ══════════════════ */
+  .cta {
+    width:100%;
+    margin-top:12px;
+    padding:20px;
+    border-radius:50px;
+    border:none;
+    font-family:'Inter',sans-serif;
+    font-size:clamp(1rem,2.5vw,1.1rem);
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.2s ease;
+    -webkit-tap-highlight-color:transparent;
+    letter-spacing:0.3px;
+  }
+  .cta-active {
+    background:linear-gradient(135deg,#4ec9f0 0%,#2ab4dc 100%);
+    color:#0a0f1a;
+    box-shadow:0 6px 30px rgba(78,201,240,0.32);
+  }
+  .cta-active:hover  { background:linear-gradient(135deg,#6dd4f5,#4ec9f0); transform:translateY(-2px); box-shadow:0 12px 38px rgba(78,201,240,0.4); }
+  .cta-active:active { transform:none; }
+  .cta:disabled      { opacity:0.5; cursor:not-allowed; transform:none !important; }
+
+  /* ══════════════════ SUCCESS ══════════════════ */
+  .success {
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:24px;
+    max-width:560px;
+    width:100%;
+    animation:fadeUp 0.4s ease both;
+    padding: 20px 0;
+  }
+  .success.active { display:flex; }
+
+  .success-ring {
+    width:100px; height:100px;
+    border-radius:50%;
+    background:rgba(78,201,240,0.1);
+    border:1.5px solid rgba(78,201,240,0.3);
+    display:flex; align-items:center; justify-content:center;
+    font-size:3rem;
+    box-shadow:0 0 60px rgba(78,201,240,0.2);
+  }
+  .success-title {
+    font-size:clamp(1.7rem,4vw,2.3rem);
+    font-weight:800; color:#fff; line-height:1.2;
+  }
+  .success-desc {
+    font-size:clamp(0.88rem,2vw,0.97rem);
+    color:var(--sub); line-height:1.7;
+  }
+  .success-pill {
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(78,201,240,0.1);
+    border:1px solid rgba(78,201,240,0.25);
+    color:#4ec9f0;
+    font-size:clamp(0.78rem,1.8vw,0.85rem); font-weight:600;
+    padding:10px 24px; border-radius:50px;
+  }
+
+  /* ══════════════════ RESPONSIVE ══════════════════ */
+
+  /* Tablet */
+  @media (max-width: 768px) {
+    .topnav  { padding: 18px 28px 0; }
+    .content { padding: 32px 20px 50px; }
+    .step    { max-width: 100%; }
+    .opt-card{ padding: 20px 22px; gap: 16px; }
+    .cta     { padding: 18px; }
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .topnav  { padding: 14px 16px 0; }
+    .logo-text { font-size: 1rem; letter-spacing: 1.5px; }
+    .logo-circle { width:34px; height:34px; font-size:0.95rem; }
+    .btn-back { padding: 6px 14px; font-size: 0.8rem; }
+    .content { padding: 24px 16px 44px; }
+    .step-title { font-size: 1.55rem; }
+    .step-sub   { margin-bottom: 28px; }
+    .opt-card   { padding: 18px 16px; gap: 14px; border-radius: 14px; }
+    .opt-icon   { font-size: 1.5rem; width: 32px; }
+    .slider-bignum { font-size: 3.5rem; }
+    .slider-lbl    { margin-bottom: 26px; }
+    .big-inp    { padding: 16px 18px; font-size: 1rem; }
+    .cta        { padding: 17px; font-size: 1rem; margin-top: 8px; }
+    .success-ring { width:82px; height:82px; font-size:2.4rem; }
+  }
+
+  /* Very small (320px) */
+  @media (max-width: 360px) {
+    .topnav { padding: 12px 14px 0; }
+    .step-title { font-size: 1.35rem; }
+    .opt-label  { font-size: 0.9rem; }
+    .opt-desc   { font-size: 0.74rem; }
+  }
+
+  /* Landscape mobile — make sure nothing gets clipped */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .content { padding-top: 16px; padding-bottom: 24px; align-items: flex-start; }
+    .step-sub { margin-bottom: 18px; }
+    .slider-bignum { font-size: 2.8rem; }
+    .slider-lbl { margin-bottom: 16px; }
+    .cta { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- NAV -->
+  <nav class="topnav">
+    <a class="logo" href="#">
+      <div class="logo-circle">Y</div>
+      <span class="logo-text">YURP</span>
+    </a>
+    <button class="btn-back hidden" id="backBtn" onclick="goBack()">&#8249; Back</button>
+  </nav>
+
+  <!-- PROGRESS -->
+  <div class="progress-track">
+    <div class="progress-fill" id="pFill" style="width:0%"></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ─── STEP 1 ─── -->
+    <div class="step active" id="step1">
+      <h1 class="step-title">I want to train Yurp for...</h1>
+      <p class="step-sub">Select the more important one to you for now</p>
+      <div class="options">
+        <div class="opt-card" data-val="Sales Calls" onclick="pick(this)">
+          <div class="opt-icon">📞</div>
+          <div class="opt-text">
+            <div class="opt-label">Sales Calls</div>
+            <div class="opt-desc">Live sales presentations and closing calls</div>
+          </div>
+          <div class="opt-chk"></div>
+        </div>
+        <div class="opt-card" data-val="Cold Calling / Appointment Setting" onclick="pick(this)">
+          <div class="opt-icon">🔥</div>
+          <div class="opt-text">
+            <div class="opt-label">Cold Calling / Appointment Setting</div>
+            <div class="opt-desc">Outbound prospecting and booking meetings</div>
+          </div>
+          <div class="opt-chk"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── STEP 2 ─── -->
+    <div class="step" id="step2">
+      <h1 class="step-title">Call Volume</h1>
+      <p class="step-sub">How many live sales calls per month are you doing?</p>
+      <div class="slider-block">
+        <div class="slider-bignum" id="callNum">10</div>
+        <div class="slider-lbl">calls per month</div>
+        <input type="range" id="callRange" min="0" max="1000" value="10"
+               oninput="updateRange(this,'callNum')"/>
+        <div class="slider-extremes"><span>0</span><span>1000+</span></div>
+      </div>
+      <button class="cta cta-active" style="margin-top:40px" onclick="go(2)">Next</button>
+    </div>
+
+    <!-- ─── STEP 3 ─── -->
+    <div class="step" id="step3">
+      <h1 class="step-title">How many reps do you manage?</h1>
+      <p class="step-sub">Include yourself in the count</p>
+      <div class="slider-block">
+        <div class="slider-bignum" id="repNum">1</div>
+        <div class="slider-lbl">reps managed</div>
+        <input type="range" id="repRange" min="1" max="100" value="1"
+               oninput="updateRange(this,'repNum')"/>
+        <div class="slider-extremes"><span>1</span><span>100+</span></div>
+      </div>
+      <button class="cta cta-active" style="margin-top:40px" onclick="go(3)">Next</button>
+    </div>
+
+    <!-- ─── STEP 4: Name + Email ─── -->
+    <div class="step" id="step4">
+      <h1 class="step-title">What's your name?</h1>
+      <p class="step-sub">So we know who we're building this for</p>
+      <div class="inp-group">
+        <input class="big-inp" id="iName" type="text" placeholder="Your full name"
+               autocomplete="name" oninput="clearE('eN','iName')"/>
+        <div class="err-txt" id="eN">Please enter your full name.</div>
+      </div>
+      <div class="inp-group">
+        <input class="big-inp" id="iEmail" type="email" placeholder="Your email address"
+               autocomplete="email" inputmode="email" oninput="clearE('eE','iEmail')"/>
+        <div class="err-txt" id="eE">Please enter a valid email address.</div>
+      </div>
+      <button class="cta cta-active" onclick="go(4)">Next</button>
+    </div>
+
+    <!-- ─── STEP 5: Phone ─── -->
+    <div class="step" id="step5">
+      <h1 class="step-title">What's your phone number?</h1>
+      <p class="step-sub">So we can reach you about your model</p>
+      <div class="inp-group">
+        <input class="big-inp" id="iPhone" type="tel" placeholder="(555) 123-4567"
+               autocomplete="tel" inputmode="tel" oninput="clearE('ePh','iPhone')"/>
+        <div class="err-txt" id="ePh">Please enter your phone number.</div>
+      </div>
+      <button class="cta cta-active" id="submitBtn" onclick="doSubmit()">Submit</button>
+    </div>
+
+    <!-- ─── SUCCESS ─── -->
+    <div class="success" id="successScreen">
+      <div class="success-ring">🎉</div>
+      <h2 class="success-title">Your AI model is being built!</h2>
+      <p class="success-desc">We've received your answers and started building a custom AI sales co-pilot tailored to your process. Check your inbox — we'll be in touch shortly.</p>
+      <div class="success-pill">⚡ Average time to ROI: 48 hours</div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /page -->
+
+<!-- ──────────────────────────────────────────
+  ⚙️  EDIT THESE 2 LINES WITH YOUR DETAILS
+────────────────────────────────────────── -->
+<script>
+  const CF7_SITE_URL = 'https://yoursite.com'; // ← your WordPress site URL
+  const CF7_FORM_ID  = 123;                     // ← your CF7 form ID (number)
+</script>
+
+<script>
+  let cur = 1;
+  const TOTAL = 5;
+  const vals = { train:'' };
+  const pcts = {1:20,2:40,3:60,4:80,5:100};
+
+  function setProg(n) {
+    document.getElementById('pFill').style.width = pcts[n]+'%';
+    document.getElementById('backBtn').classList.toggle('hidden', n<=1);
+  }
+
+  function showStep(n) {
+    document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+    document.getElementById('step'+n).classList.add('active');
+    cur=n; setProg(n);
+    // scroll to top on mobile so header is always visible
+    window.scrollTo({top:0, behavior:'smooth'});
+    if(n===2) paintRange('callRange');
+    if(n===3) paintRange('repRange');
+  }
+
+  function pick(el) {
+    el.closest('.options').querySelectorAll('.opt-card').forEach(c=>c.classList.remove('selected'));
+    el.classList.add('selected');
+    vals.train = el.dataset.val;
+    setTimeout(()=>go(1), 260);
+  }
+
+  function updateRange(el, numId) {
+    document.getElementById(numId).textContent = el.value;
+    paintRange(el.id);
+  }
+  function paintRange(id) {
+    const r = document.getElementById(id);
+    if(!r) return;
+    const p = ((r.value-r.min)/(r.max-r.min))*100;
+    r.style.background=`linear-gradient(to right,#4ec9f0 ${p}%,rgba(255,255,255,0.1) ${p}%)`;
+  }
+
+  function go(n) {
+    if(n===1 && !vals.train) return;
+    if(n===4) {
+      let ok=true;
+      const nm=document.getElementById('iName'), em=document.getElementById('iEmail');
+      if(!nm.value.trim()){showE('eN','iName');ok=false;}
+      if(!em.value.trim()||!/\S+@\S+\.\S+/.test(em.value)){showE('eE','iEmail');ok=false;}
+      if(!ok) return;
+    }
+    if(n<TOTAL) showStep(n+1);
+  }
+
+  function goBack() { if(cur>1) showStep(cur-1); }
+
+  function showE(eId,iId){ document.getElementById(eId).classList.add('show'); document.getElementById(iId).classList.add('invalid'); }
+  function clearE(eId,iId){ document.getElementById(eId).classList.remove('show'); document.getElementById(iId).classList.remove('invalid'); }
+
+  async function doSubmit() {
+    const ph = document.getElementById('iPhone');
+    if(!ph.value.trim()){ showE('ePh','iPhone'); return; }
+
+    const btn=document.getElementById('submitBtn');
+    btn.disabled=true; btn.textContent='Submitting…';
+
+    const fd=new FormData();
+    fd.append('_wpcf7',         CF7_FORM_ID);
+    fd.append('_wpcf7_version', '5.9.8');
+    fd.append('_wpcf7_locale',  'en_US');
+    fd.append('_wpcf7_unit_tag',`wpcf7-f${CF7_FORM_ID}-p1-o1`);
+    fd.append('your-train',     vals.train);
+    fd.append('your-calls',     document.getElementById('callRange').value);
+    fd.append('your-reps',      document.getElementById('repRange').value);
+    fd.append('your-name',      document.getElementById('iName').value);
+    fd.append('your-email',     document.getElementById('iEmail').value);
+    fd.append('your-phone',     ph.value);
+
+    try {
+      const r=await fetch(
+        `${CF7_SITE_URL}/wp-json/contact-form-7/v1/contact-forms/${CF7_FORM_ID}/feedback`,
+        {method:'POST',body:fd}
+      );
+      console.log('CF7:',await r.json());
+    } catch(e){ console.warn(e); }
+
+    document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+    document.getElementById('successScreen').classList.add('active');
+    document.getElementById('pFill').style.width='100%';
+    document.getElementById('backBtn').classList.add('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  // init
+  setProg(1);
+  paintRange('callRange');
+  paintRange('repRange');
+</script>
+</body>
+</html>
